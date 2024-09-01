@@ -1,0 +1,174 @@
+﻿@using System.Diagnostics
+
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+@page "/"
+
+<PageTitle>Game Test</PageTitle>
+
+<div style="color:antiquewhite">Width: @viewportWidth</div>
+<div style="color:antiquewhite">Height: @viewportHeight</div>
+<div><button @onclick=@TogglePause>@(isPaused ? "Resume" : "Pause")</button></div>
+<div style="position:relative;height:@(mapHeight)px;width:@(mapWidth)px;display:inline-block;margin-left:auto;margin-right:auto;border:2px solid black">
+    @foreach (var box in renderables)
+    {
+        <div style="position:absolute;top:@(box.Y)px;left:@(box.X)px;height:@(box.Height)px;width:@(box.Width)px;background-color:@box.Color"></div>
+    }
+</div>
+
+@code {
+    private Box[] renderables = new Box[20];
+
+    private const double MS_PER_UPDATE = 10;
+    private long previous = Stopwatch.GetTimestamp();
+    private double lag = 0.0;
+    private Timer? timer;
+    private HashSet<string> keysActive = new();
+    private int viewportWidth;
+    private int viewportHeight;
+    private int mapHeight = 1200;
+    private int mapWidth = 1200;
+    private double frameCount;
+    private double totalDuration;
+    private Random random = new(69);
+    private bool isPaused;
+
+    protected override void OnInitialized()
+    {
+        renderables[0] = new Box(0, 0) { Width = 90, Height = 50, Color = "red" };
+        renderables[1] = new Box(0, 60) { Width = 90, Height = 50, Color = "blue" };
+        renderables[2] = new Box(0, 120) { Width = 90, Height = 50, Color = "green" };
+        renderables[3] = new Box(0, 180) { Width = 90, Height = 50, Color = "yellow" };
+        renderables[4] = new Box(0, 240) { Width = 90, Height = 50, Color = "purple" };
+        renderables[5] = new Box(0, 300) { Width = 90, Height = 50, Color = "orange" };
+        renderables[6] = new Box(0, 360) { Width = 90, Height = 50, Color = "pink" };
+        renderables[7] = new Box(0, 420) { Width = 90, Height = 50, Color = "brown" };
+        renderables[8] = new Box(0, 480) { Width = 90, Height = 50, Color = "cyan" };
+        renderables[9] = new Box(0, 540) { Width = 90, Height = 50, Color = "magenta" };
+        renderables[10] = new Box(0, 600) { Width = 90, Height = 50, Color = "lime" };
+        renderables[11] = new Box(0, 660) { Width = 90, Height = 50, Color = "teal" };
+        renderables[12] = new Box(0, 720) { Width = 90, Height = 50, Color = "indigo" };
+        renderables[13] = new Box(0, 780) { Width = 90, Height = 50, Color = "maroon" };
+        renderables[14] = new Box(0, 840) { Width = 90, Height = 50, Color = "olive" };
+        renderables[15] = new Box(0, 900) { Width = 90, Height = 50, Color = "navy" };
+        renderables[16] = new Box(0, 960) { Width = 90, Height = 50, Color = "gray" };
+        renderables[17] = new Box(0, 1020) { Width = 90, Height = 50, Color = "black" };
+        renderables[18] = new Box(0, 1080) { Width = 90, Height = 50, Color = "white" };
+        renderables[19] = new Box(0, 1140) { Width = 90, Height = 50, Color = "silver" };
+
+        timer = new Timer(OnElapsedTime, null, 0, 1);
+    }
+
+    private void OnElapsedTime(object? state)
+    {
+        if (isPaused) return;
+        var current = Stopwatch.GetTimestamp();
+        var elapsed = Stopwatch.GetElapsedTime(previous, current);
+        previous = current;
+        lag += elapsed.TotalMilliseconds;
+
+        while (lag >= MS_PER_UPDATE)
+        {
+            Update();
+            lag -= MS_PER_UPDATE;
+        }
+
+        Render();
+        frameCount++;
+        totalDuration += elapsed.Milliseconds;
+    }
+
+    private void Update()
+    {
+        foreach (var box in renderables)
+        {
+            if (box.X + box.Width >= mapWidth)
+            {
+                box.Speed = random.Next(2, 6);
+                box.Direction = 1;
+            }
+            else if (box.X <= 0)
+            {
+                box.Speed = random.Next(2, 6);
+                box.Direction = 0;
+            }
+
+            if (box.Direction == 0)
+            {
+                box.MoveRight(mapWidth);
+            }
+            else if (box.Direction == 1)
+            {
+                box.MoveLeft(mapWidth);
+            }
+        }
+    }
+
+    private void TogglePause()
+    {
+        previous = Stopwatch.GetTimestamp();
+        isPaused = !isPaused;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("window.registerViewportChangeCallback", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("window.registerKeyDownCallback", DotNetObjectReference.Create(this));
+            await JSRuntime.InvokeVoidAsync("window.registerKeyUpCallback", DotNetObjectReference.Create(this));
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnResize(int width, int height)
+    {
+        if (viewportWidth == width && viewportHeight == height) return;
+        viewportWidth = width;
+        viewportHeight = height;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnKeyUp(string keyCode)
+    {
+        keysActive.Remove(keyCode);
+    }
+
+    [JSInvokable]
+    public void OnKeyDown(string keyCode)
+    {
+        keysActive.Add(keyCode);
+    }
+
+    private void Render()
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private class Box(double startX, double startY)
+    {
+        private double x = startX;
+        private double y = startY;
+
+        public int X => (int)x;
+        public int Y => (int)y;
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string? Color { get; set; }
+        public double Speed { get; set; }
+        public int Direction { get; set; }
+
+        public void MoveUp(int max) => y = Math.Clamp(y - Speed, 0, max - Height);
+        public void MoveDown(int max) => y = Math.Clamp(y + Speed, 0, max - Height);
+        public void MoveLeft(int max) => x = Math.Clamp(x - Speed, 0, max - Width);
+        public void MoveRight(int max) => x = Math.Clamp(x + Speed, 0, max - Width);
+    }
+}
