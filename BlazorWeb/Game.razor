@@ -1,4 +1,5 @@
 ﻿@using System.Diagnostics
+@using System.Security.Cryptography
 
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -6,18 +7,20 @@
 
 <PageTitle>Game Test</PageTitle>
 
-<div style="color:antiquewhite">Width: @viewportWidth</div>
-<div style="color:antiquewhite">Height: @viewportHeight</div>
-<div><button @onclick=@TogglePause>@(isPaused ? "Resume" : "Pause")</button></div>
-<div style="position:relative;height:@(mapHeight)px;width:@(mapWidth)px;display:inline-block;margin-left:auto;margin-right:auto;border:2px solid black">
-    @foreach (var box in renderables)
-    {
-        <div style="position:absolute;top:@(box.Y)px;left:@(box.X)px;height:@(box.Height)px;width:@(box.Width)px;background-color:@box.Color"></div>
-    }
+<div style="margin:auto;width:@(mapWidth)px">
+    <div style="background-color:#222222;position:relative;overflow:hidden;height:@(mapHeight)px;width:@(mapWidth)px">
+        @foreach (var box in renderables)
+        {
+            <div style="position:absolute;top:@(box.Y)px;left:@(box.X)px;height:@(box.Height)px;width:@(box.Width)px;background-color:@box.Color"></div>
+        }
+    </div>
+
+    <div style="margin-top:16px"><button @onclick=@TogglePause>@(isPaused ? "Resume" : "Pause")</button></div>
 </div>
 
+
 @code {
-    private Box[] renderables = new Box[20];
+    private Box[] renderables = new Box[120];
 
     private const double MS_PER_UPDATE = 10;
     private long previous = Stopwatch.GetTimestamp();
@@ -30,32 +33,24 @@
     private int mapWidth = 1200;
     private double frameCount;
     private double totalDuration;
-    private Random random = new(69);
-    private bool isPaused;
+    private bool isPaused = true;
 
     protected override void OnInitialized()
     {
-        renderables[0] = new Box(0, 0) { Width = 90, Height = 50, Color = "red" };
-        renderables[1] = new Box(0, 60) { Width = 90, Height = 50, Color = "blue" };
-        renderables[2] = new Box(0, 120) { Width = 90, Height = 50, Color = "green" };
-        renderables[3] = new Box(0, 180) { Width = 90, Height = 50, Color = "yellow" };
-        renderables[4] = new Box(0, 240) { Width = 90, Height = 50, Color = "purple" };
-        renderables[5] = new Box(0, 300) { Width = 90, Height = 50, Color = "orange" };
-        renderables[6] = new Box(0, 360) { Width = 90, Height = 50, Color = "pink" };
-        renderables[7] = new Box(0, 420) { Width = 90, Height = 50, Color = "brown" };
-        renderables[8] = new Box(0, 480) { Width = 90, Height = 50, Color = "cyan" };
-        renderables[9] = new Box(0, 540) { Width = 90, Height = 50, Color = "magenta" };
-        renderables[10] = new Box(0, 600) { Width = 90, Height = 50, Color = "lime" };
-        renderables[11] = new Box(0, 660) { Width = 90, Height = 50, Color = "teal" };
-        renderables[12] = new Box(0, 720) { Width = 90, Height = 50, Color = "indigo" };
-        renderables[13] = new Box(0, 780) { Width = 90, Height = 50, Color = "maroon" };
-        renderables[14] = new Box(0, 840) { Width = 90, Height = 50, Color = "olive" };
-        renderables[15] = new Box(0, 900) { Width = 90, Height = 50, Color = "navy" };
-        renderables[16] = new Box(0, 960) { Width = 90, Height = 50, Color = "gray" };
-        renderables[17] = new Box(0, 1020) { Width = 90, Height = 50, Color = "black" };
-        renderables[18] = new Box(0, 1080) { Width = 90, Height = 50, Color = "white" };
-        renderables[19] = new Box(0, 1140) { Width = 90, Height = 50, Color = "silver" };
-
+        for (var i = 0; i < renderables.Length; i++)
+        {
+            var r = RandomNumberGenerator.GetInt32(0, 255);
+            var g = RandomNumberGenerator.GetInt32(0, 255);
+            var b = RandomNumberGenerator.GetInt32(0, 255);
+            renderables[i] = new Box(0, i * 10)
+            {
+                Width = 50,
+                Height = 10,
+                Color = $"rgb({r},{g},{b})",
+                Speed = RandomNumberGenerator.GetInt32(2, 6)
+            };
+        }
+        
         timer = new Timer(OnElapsedTime, null, 0, 1);
     }
 
@@ -84,12 +79,20 @@
         {
             if (box.X + box.Width >= mapWidth)
             {
-                box.Speed = random.Next(2, 6);
+                var r = RandomNumberGenerator.GetInt32(0, 255);
+                var g = RandomNumberGenerator.GetInt32(0, 255);
+                var b = RandomNumberGenerator.GetInt32(0, 255);
+                box.Speed = RandomNumberGenerator.GetInt32(2, 6);
+                box.Color = $"rgb({r},{g},{b})";
                 box.Direction = 1;
             }
             else if (box.X <= 0)
             {
-                box.Speed = random.Next(2, 6);
+                var r = RandomNumberGenerator.GetInt32(0, 255);
+                var g = RandomNumberGenerator.GetInt32(0, 255);
+                var b = RandomNumberGenerator.GetInt32(0, 255);
+                box.Speed = RandomNumberGenerator.GetInt32(2, 6);
+                box.Color = $"rgb({r},{g},{b})";
                 box.Direction = 0;
             }
 
