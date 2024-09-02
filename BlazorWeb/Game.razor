@@ -11,9 +11,19 @@
 <h1 style="color:#F0F0F0;text-align:center">Blazor Game Prototype</h1>
 <div style="margin:auto;width:@(GameState.MapSize.Width)px">
     <div style="background-color:#222222;position:relative;overflow:hidden;height:@(GameState.MapSize.Height)px;width:@(GameState.MapSize.Width)px">
+        <div style="position:absolute;z-index:0;display:grid;grid-template-columns:repeat(17, 64px)">
+            @for(var row = 0; row < 13; row++)
+            {
+                @for (var col = 0; col < 17; col++)
+                {
+                    <div style="height:62px;width:62px;border:1px dashed #333333;color:#666666;font-size:12px;line-height:62px;vertical-align:middle;text-align:center">@row - @col</div>
+                }
+            }
+        </div>
+
         @foreach (var obj in GameState.GameObjects)
         {
-            <div style="position:absolute;top:@(obj.Position.Y)px;left:@(obj.Position.X)px;height:@(obj.Size.Height)px;width:@(obj.Size.Width)px;overflow:hidden">
+            <div style="@GameObjectBoxStyle(obj)">
                 <img src="@obj.Sprite" style="@GameObjectStyle(obj)" />
             </div>
         }
@@ -24,6 +34,10 @@
 
 @code {
     private const double MS_PER_UPDATE = 10;
+    private const double MS_PER_OFFSET_CHANGE = 250;
+    private int spriteOffset = 0;
+    private int spriteOffsetIncrement = 1;
+    private long lastOffsetChange = Stopwatch.GetTimestamp();
     private long previous = Stopwatch.GetTimestamp();
     private double lag = 0.0;
     private Timer? timer;
@@ -35,23 +49,26 @@
 
     private void OnElapsedTime(object? state)
     {
-        if (isPaused) return;
-        var current = Stopwatch.GetTimestamp();
-        var elapsed = Stopwatch.GetElapsedTime(previous, current);
-        previous = current;
-        lag += elapsed.TotalMilliseconds;
-
-        while (lag >= MS_PER_UPDATE)
+        if (isPaused is false)
         {
-            GameState.Update();
-            lag -= MS_PER_UPDATE;
-        }
+            var current = Stopwatch.GetTimestamp();
+            var elapsed = Stopwatch.GetElapsedTime(previous, current);
+            previous = current;
+            lag += elapsed.TotalMilliseconds;
 
+            while (lag >= MS_PER_UPDATE)
+            {
+                GameState.Update();
+                lag -= MS_PER_UPDATE;
+            }
+        }
         Render();
     }
 
+    private string GameObjectBoxStyle(GameObject obj) =>
+        $"position:absolute;overflow:hidden;top:{obj.Position.Y}px;left:{obj.Position.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{obj.Layer}";
     private string GameObjectStyle(GameObject obj) =>
-        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:-64px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{obj.Layer}";
+        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{obj.Layer}";
 
     private void TogglePause()
     {
@@ -85,7 +102,19 @@
     [JSInvokable]
     public void OnKeyDown(string keyCode) => GameState.KeysActive.Add(keyCode);
 
-    private void Render() => StateHasChanged();
+    private void Render()
+    {
+        var current = Stopwatch.GetTimestamp();
+        if (Stopwatch.GetElapsedTime(lastOffsetChange, current).TotalMilliseconds >= MS_PER_OFFSET_CHANGE)
+        {
+            lastOffsetChange = current;
+            if (spriteOffset == 0) spriteOffsetIncrement = 1;
+            else if (spriteOffset == 2) spriteOffsetIncrement = -1;
+
+            spriteOffset += spriteOffsetIncrement;
+        }
+        StateHasChanged();
+    }
 
     public void Dispose()
     {

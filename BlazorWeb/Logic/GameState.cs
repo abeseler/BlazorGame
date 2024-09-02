@@ -15,7 +15,7 @@ public static class GameState
             Speed = 2,
             Position = new Point(64, 0),
             Size = new Size(64, 64),
-            Direction = Direction.Up,
+            Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/hero.png",
         },
@@ -38,7 +38,57 @@ public static class GameState
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/blue.png",
-        }
+        },
+        new()
+        {
+            Id = "vampire",
+            Speed = 2,
+            Position = new Point(448, 0),
+            Size = new Size(64, 64),
+            Direction = Direction.Down,
+            Layer = 1,
+            Sprite = "assets/vampire.png",
+        },
+        new()
+        {
+            Id = "swashbuckle",
+            Speed = 2,
+            Position = new Point(576, 0),
+            Size = new Size(64, 64),
+            Direction = Direction.Down,
+            Layer = 1,
+            Sprite = "assets/swashbuckle.png",
+        },
+        new()
+        {
+            Id = "angel",
+            Speed = 2,
+            Position = new Point(704, 0),
+            Size = new Size(64, 64),
+            Direction = Direction.Down,
+            Layer = 1,
+            Sprite = "assets/angel.png",
+        },
+        new()
+        {
+            Id = "samuari",
+            Speed = 2,
+            Position = new Point(832, 0),
+            Size = new Size(64, 64),
+            Direction = Direction.Down,
+            Layer = 1,
+            Sprite = "assets/samuari.png",
+        },
+        new()
+        {
+            Id = "black",
+            Speed = 2,
+            Position = new Point(960, 0),
+            Size = new Size(64, 64),
+            Direction = Direction.Down,
+            Layer = 1,
+            Sprite = "assets/black.png",
+        },
     ];
 
     public static void Update()
