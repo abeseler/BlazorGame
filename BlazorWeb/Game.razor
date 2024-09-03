@@ -1,6 +1,7 @@
 ﻿@using System.Diagnostics
 @using System.Security.Cryptography
 @using BlazorWeb.Logic
+@using System.Text.Json
 
 @inject IJSRuntime JSRuntime
 @implements IDisposable
@@ -8,25 +9,27 @@
 
 <PageTitle>Game Test</PageTitle>
 
-<h1 style="color:#F0F0F0;text-align:center">Blazor Game Prototype</h1>
 <div style="margin:auto;width:@(GameState.MapSize.Width)px">
-    <div style="background-color:#222222;position:relative;overflow:hidden;height:@(GameState.MapSize.Height)px;width:@(GameState.MapSize.Width)px">
-        <div style="position:absolute;z-index:0;display:grid;grid-template-columns:repeat(17, 64px)">
-            @for(var row = 0; row < 13; row++)
-            {
-                @for (var col = 0; col < 17; col++)
+    <h1 style="color:#F0F0F0;text-align:center">Blazor Game Prototype</h1>
+    <div id="viewWindow" style="position:relative;overflow:hidden;background-color:#222222;border-radius:4px;height:@(GameState.TILE_SIZE * 13)px;width:@(GameState.TILE_SIZE * 17)px">
+        <div id="gameMap" style="position:absolute;overflow:hidden;height:@(GameState.MapSize.Height)px;width:@(GameState.MapSize.Width)px">
+            <div id="gameGrid" style="position:absolute;z-index:0;display:grid;grid-template-columns:repeat(40, 64px)">
+                @for(var row = 0; row < 40; row++)
                 {
-                    <div style="height:62px;width:62px;border:1px dashed #333333;color:#666666;font-size:12px;line-height:62px;vertical-align:middle;text-align:center">@row - @col</div>
+                    @for (var col = 0; col < 40; col++)
+                    {
+                        <div style="height:62px;width:62px;border:1px dashed #333333;color:#666666;font-size:12px;line-height:62px;vertical-align:middle;text-align:center">@row - @col</div>
+                    }
                 }
+            </div>
+
+            @foreach (var obj in GameState.GameObjects)
+            {
+                <div id="@obj.Id" style="@GameObjectBoxStyle(obj)">
+                    <img src="@obj.Sprite" style="@GameObjectStyle(obj)" />
+                </div>
             }
         </div>
-
-        @foreach (var obj in GameState.GameObjects)
-        {
-            <div style="@GameObjectBoxStyle(obj)">
-                <img src="@obj.Sprite" style="@GameObjectStyle(obj)" />
-            </div>
-        }
     </div>
 
     <div style="margin-top:16px"><button @onclick=@TogglePause>@(isPaused ? "Resume" : "Pause")</button></div>
@@ -65,16 +68,30 @@
         Render();
     }
 
-    private string GameObjectBoxStyle(GameObject obj) =>
-        $"position:absolute;overflow:hidden;top:{obj.Position.Y}px;left:{obj.Position.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{obj.Layer}";
-    private string GameObjectStyle(GameObject obj) =>
-        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{obj.Layer}";
+    private void Render()
+    {
+        var current = Stopwatch.GetTimestamp();
+        if (Stopwatch.GetElapsedTime(lastOffsetChange, current).TotalMilliseconds >= MS_PER_OFFSET_CHANGE)
+        {
+            lastOffsetChange = current;
+            if (spriteOffset == 0) spriteOffsetIncrement = 1;
+            else if (spriteOffset == 2) spriteOffsetIncrement = -1;
+
+            spriteOffset += spriteOffsetIncrement;
+        }
+        StateHasChanged();
+    }
 
     private void TogglePause()
     {
         previous = Stopwatch.GetTimestamp();
         isPaused = !isPaused;
     }
+
+    private string GameObjectBoxStyle(GameObject obj) =>
+        $"position:absolute;overflow:hidden;top:{obj.Position.Y}px;left:{obj.Position.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{obj.Layer}";
+    private string GameObjectStyle(GameObject obj) =>
+        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{obj.Layer}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -101,20 +118,6 @@
 
     [JSInvokable]
     public void OnKeyDown(string keyCode) => GameState.KeysActive.Add(keyCode);
-
-    private void Render()
-    {
-        var current = Stopwatch.GetTimestamp();
-        if (Stopwatch.GetElapsedTime(lastOffsetChange, current).TotalMilliseconds >= MS_PER_OFFSET_CHANGE)
-        {
-            lastOffsetChange = current;
-            if (spriteOffset == 0) spriteOffsetIncrement = 1;
-            else if (spriteOffset == 2) spriteOffsetIncrement = -1;
-
-            spriteOffset += spriteOffsetIncrement;
-        }
-        StateHasChanged();
-    }
 
     public void Dispose()
     {

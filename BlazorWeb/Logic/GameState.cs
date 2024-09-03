@@ -5,16 +5,16 @@ namespace BlazorWeb.Logic;
 
 public static class GameState
 {
-    public static Size MapSize { get; } = new(1088, 832);
+    public const int TILE_SIZE = 64;
+    public static Size MapSize { get; } = new(TILE_SIZE * 17, TILE_SIZE * 13);
     public static HashSet<string> KeysActive { get; } = [];
 
     public static List<GameObject> GameObjects { get; } = [
         new()
         {
             Id = "hero",
-            Speed = 2,
-            Position = new Point(64, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/hero.png",
@@ -22,9 +22,8 @@ public static class GameState
         new()
         {
             Id = "enemy",
-            Speed = 2,
-            Position = new Point(192, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 3, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/enemy.png",
@@ -32,9 +31,8 @@ public static class GameState
         new()
         {
             Id = "blue",
-            Speed = 2,
-            Position = new Point(320, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 5, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/blue.png",
@@ -42,9 +40,8 @@ public static class GameState
         new()
         {
             Id = "vampire",
-            Speed = 2,
-            Position = new Point(448, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 7, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/vampire.png",
@@ -52,9 +49,8 @@ public static class GameState
         new()
         {
             Id = "swashbuckle",
-            Speed = 2,
-            Position = new Point(576, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 9, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/swashbuckle.png",
@@ -62,9 +58,8 @@ public static class GameState
         new()
         {
             Id = "angel",
-            Speed = 2,
-            Position = new Point(704, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 11, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/angel.png",
@@ -72,9 +67,8 @@ public static class GameState
         new()
         {
             Id = "samuari",
-            Speed = 2,
-            Position = new Point(832, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 13, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/samuari.png",
@@ -82,9 +76,8 @@ public static class GameState
         new()
         {
             Id = "black",
-            Speed = 2,
-            Position = new Point(960, 0),
-            Size = new Size(64, 64),
+            Position = new Point(TILE_SIZE * 15, 0),
+            Size = new Size(TILE_SIZE, TILE_SIZE),
             Direction = Direction.Down,
             Layer = 1,
             Sprite = "assets/black.png",
@@ -97,39 +90,50 @@ public static class GameState
         {
             if (gameObject.Position.Y == 0)
             {
-                gameObject.Direction = Direction.Down;
-                gameObject.Speed = RandomNumberGenerator.GetInt32(1, 4);
+                gameObject.Speed = new(0, RandomNumberGenerator.GetInt32(1, 4));
             }                
             else if (gameObject.Position.Y == MapSize.Height - gameObject.Size.Height)
             {
-                gameObject.Direction = Direction.Up;
-                gameObject.Speed = RandomNumberGenerator.GetInt32(1, 4);
-            }                
+                gameObject.Speed = new(0, RandomNumberGenerator.GetInt32(-4, 0));
+            }
 
-            gameObject.Move(gameObject.Direction, MapSize);
+            gameObject.Move();
         }
     }
+}
+
+public sealed class GameMap
+{
+    public MapTile[,] Tiles = new MapTile[40,40];
+}
+
+public sealed class MapTile
+{
+    public Guid Id { get; set; }
+    public required string Sprite { get; set; }
 }
 
 public sealed class GameObject
 {
     public required string Id { get; set; }
-    public Point Coordinate { get; set; }
     public Point Position { get; set; }
+    public Point Speed { get; set; }
     public Size Size { get; set; }
     public Direction Direction { get; set; }
-    public int Speed { get; set; }
     public int Layer { get; set; }
     public required string Sprite { get; set; }
-    public void Move(Direction direction, Size map)
+    public void Move()
     {
-        Position = direction switch
+        var x = Math.Clamp(Position.X + Speed.X, 0, GameState.MapSize.Width - Size.Width);
+        var y = Math.Clamp(Position.Y + Speed.Y, 0, GameState.MapSize.Height - Size.Height);
+        Position = new Point(x, y);
+        Direction = Speed switch
         {
-            Direction.Up => new Point(Position.X, Math.Clamp(Position.Y - Speed, 0, map.Height - Size.Height)),
-            Direction.Down => new Point(Position.X, Math.Clamp(Position.Y + Speed, 0, map.Height - Size.Height)),
-            Direction.Left => new Point(Math.Clamp(Position.X - Speed, 0, map.Width - Size.Width), Position.Y),
-            Direction.Right => new Point(Math.Clamp(Position.X + Speed, 0, map.Width - Size.Width), Position.Y),
-            _ => Position
+            { Y: > 0 } => Direction.Down,
+            { Y: < 0 } => Direction.Up,
+            { X: > 0 } => Direction.Right,
+            { X: < 0 } => Direction.Left,
+            _ => Direction
         };
     }
 }
