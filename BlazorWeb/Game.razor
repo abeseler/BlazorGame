@@ -9,21 +9,22 @@
 
 <PageTitle>Game Test</PageTitle>
 
-<div style="margin:auto;width:@(GameState.MapSize.Width)px">
+<div style="margin:auto;width:@(GameState.Map.RenderedSize.Width)px">
     <h1 style="color:#F0F0F0;text-align:center">Blazor Game Prototype</h1>
     <div id="viewWindow" style="position:relative;overflow:hidden;background-color:#222222;border-radius:4px;height:@(GameState.TILE_SIZE * 13)px;width:@(GameState.TILE_SIZE * 17)px">
-        <div id="gameMap" style="position:absolute;overflow:hidden;height:@(GameState.MapSize.Height)px;width:@(GameState.MapSize.Width)px">
-            <div id="gameGrid" style="position:absolute;z-index:0;display:grid;grid-template-columns:repeat(40, 64px)">
-                @for(var row = 0; row < 40; row++)
+        <div id="gameMap" style="position:absolute;overflow:hidden;height:@(GameState.Map.RenderedSize.Height)px;width:@(GameState.Map.RenderedSize.Width)px">
+            <div id="gameGrid" style="position:absolute;z-index:0;display:grid;grid-template-columns:repeat(@GameState.Map.GridSize.Width, 64px)">
+                @for (var y = 0; y < GameState.Map.GridSize.Height; y++)
                 {
-                    @for (var col = 0; col < 40; col++)
+                    @for (var x = 0; x < GameState.Map.GridSize.Width; x++)
                     {
-                        <div style="height:62px;width:62px;border:1px dashed #333333;color:#666666;font-size:12px;line-height:62px;vertical-align:middle;text-align:center">@row - @col</div>
+                        var tile = GameState.Map.Grid[x, y];
+                        <div style="height:62px;width:62px;background-color:@(tile.Occupant is not null ? "#FFCC00" : "none");border:1px dashed #333333;color:#666666;font-size:12px;line-height:62px;vertical-align:middle;text-align:center">@tile.Position.X, @tile.Position.Y</div>
                     }
                 }
             </div>
 
-            @foreach (var obj in GameState.GameObjects)
+            @foreach (var obj in GameState.Entities)
             {
                 <div id="@obj.Id" style="@GameObjectBoxStyle(obj)">
                     <img src="@obj.Sprite" style="@GameObjectStyle(obj)" />
@@ -89,9 +90,9 @@
     }
 
     private string GameObjectBoxStyle(GameObject obj) =>
-        $"position:absolute;overflow:hidden;top:{obj.Position.Y}px;left:{obj.Position.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{obj.Layer}";
+        $"position:absolute;overflow:hidden;top:{obj.RenderedPosition.Y}px;left:{obj.RenderedPosition.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{(int)obj.RenderGroup}";
     private string GameObjectStyle(GameObject obj) =>
-        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{obj.Layer}";
+        $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{(int)obj.RenderGroup}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -114,10 +115,18 @@
     }
 
     [JSInvokable]
-    public void OnKeyUp(string keyCode) => GameState.KeysActive.Remove(keyCode);
+    public void OnKeyUp(string keyCode)
+    {
+        if (Controller.TryParse(keyCode, out var control))
+            Controller.ActiveControls.Remove(control.Value);
+    }
 
     [JSInvokable]
-    public void OnKeyDown(string keyCode) => GameState.KeysActive.Add(keyCode);
+    public void OnKeyDown(string keyCode)
+    {
+        if (Controller.TryParse(keyCode, out var control))
+            Controller.ActiveControls.Add(control.Value);
+    }
 
     public void Dispose()
     {
