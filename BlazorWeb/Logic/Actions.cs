@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Numerics;
 
 namespace BlazorWeb.Logic;
@@ -9,14 +8,13 @@ public interface IAction
     void Execute(Entity entity);
 }
 
-public sealed class WaitAction(TimeSpan duration) : IAction
+public sealed class WaitAction(int numOfFrames) : IAction
 {
-    private readonly long _waitStarted = Stopwatch.GetTimestamp();
-    private readonly TimeSpan _duration = duration;
+    private int _numOfFrames = numOfFrames;
 
     public void Execute(Entity entity)
     {
-        if (Stopwatch.GetElapsedTime(_waitStarted) > _duration)
+        if (--_numOfFrames <= 0)
             entity.CurrentAction = null;
     }
 }
@@ -28,11 +26,19 @@ public sealed class MoveAction(Point destination, float speed) : IAction
     private readonly float _speed = speed;
     public void Execute(Entity entity)
     {
-        var positionAdjustment = new Vector2(_destination.X - entity.MapPosition.X, _destination.Y - entity.MapPosition.Y) * _speed;
+        var positionAdjustment = new Vector2(_destination.X - entity.MapPosition.X, _destination.Y - entity.MapPosition.Y) * _speed;        
         var newPosition = Vector2.Add(entity.RenderedPosition, positionAdjustment);
 
         var distance = Vector2.Distance(entity.RenderedPosition, _renderingDestination);
         entity.RenderedPosition = distance < _speed ? _renderingDestination : newPosition;
+        entity.Direction = positionAdjustment switch
+        {
+            { X: 0, Y: > 0 } => Direction.Down,
+            { X: 0, Y: < 0 } => Direction.Up,
+            { X: > 0, Y: 0 } => Direction.Right,
+            { X: < 0, Y: 0 } => Direction.Left,
+            _ => entity.Direction
+        };
 
         if (entity.RenderedPosition == _renderingDestination)
         {

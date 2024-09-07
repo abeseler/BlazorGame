@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using System.Drawing;
+using System.Security.Cryptography;
 
 namespace BlazorWeb.Logic;
 
@@ -24,11 +25,47 @@ public sealed class MoveUpDownBehavior(Entity entity) : IBehavior
 
         if (GameState.Map.Grid[nextGridX, nextGridY].Occupant is not null)
         {
-            return new WaitAction(TimeSpan.FromMilliseconds(500));
+            return new WaitAction(100);
         }
 
         GameState.Map.Grid[nextGridX, nextGridY].Occupant = _entity;
 
         return new MoveAction(new(nextGridX, nextGridY), _speed);
+    }
+}
+
+public sealed class WanderMapBehavior(Entity entity) : IBehavior
+{
+    private readonly Entity _entity = entity;
+    private Point _destination = entity.MapPosition;
+    private Stack<Point>? _path;
+    public IAction DecideNextAction()
+    {
+        if (_path is null || _path.Count == 0)
+        {
+            var newX = RandomNumberGenerator.GetInt32(0, GameState.Map.GridSize.Width);
+            var newY = RandomNumberGenerator.GetInt32(0, GameState.Map.GridSize.Height);
+            var destination = new Point(newX, newY);
+            if (destination == _entity.MapPosition)
+            {
+                return new WaitAction(0);
+            }
+            if (Pathfinder.TryCalculatePath(_entity.MapPosition, destination, out _path) is false)
+            {
+                return new WaitAction(0);
+            }
+            _destination = _path.Pop();
+        }
+
+        if (GameState.Map.IsBlocked(_path.Peek()))
+        {
+            _path.Clear();
+            return new WaitAction(0);
+        }
+
+        _destination = _path.Pop();
+        GameState.Map.Grid[_destination.X, _destination.Y].Occupant = _entity;
+
+        return new MoveAction(_destination, 1);
     }
 }

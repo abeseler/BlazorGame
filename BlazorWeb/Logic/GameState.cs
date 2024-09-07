@@ -106,8 +106,8 @@ public static class GameState
 
         foreach (var entity in Entities)
         {
-            Map.Grid[(int)entity.MapPosition.X, (int)entity.MapPosition.Y].Occupant = entity;
-            entity.NextActionBehavior = new MoveUpDownBehavior(entity);
+            Map.Grid[entity.MapPosition.X, entity.MapPosition.Y].Occupant = entity;
+            entity.NextActionBehavior = new WanderMapBehavior(entity);
         }
     }
 

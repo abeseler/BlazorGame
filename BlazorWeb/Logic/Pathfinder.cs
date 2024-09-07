@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Drawing;
 
 namespace BlazorWeb.Logic;
 
@@ -14,37 +15,31 @@ public static class Pathfinder
 {
     private static readonly Dictionary<Point, Node> s_openNodes = [];
     private static readonly HashSet<Point> s_closedSet = [];
-    private static readonly int[] s_dx = [1, -1, 0, 0];
-    private static readonly int[] s_dy = [0, 0, 1, -1];
+    private static readonly Point[] s_neighbors = [new(0, 1), new(0, -1), new(1, 0), new(-1, 0)];
 
-    public static bool FindPathAStar(Point start, Point end, out Stack<Point>? path)
+    public static bool TryCalculatePath(Point start, Point end, [NotNullWhen(true)] out Stack<Point>? path)
     {
-        var startNode = new Node(start)
+        s_closedSet.Clear();
+        s_openNodes.Clear();
+        s_openNodes.Add(start, new Node(start)
         {
             GCost = 0,
             HCost = CalculateDistance(start, end),
             Parent = null
-        };
+        });
 
-        s_openNodes.Clear();
-        s_openNodes.Add(start, startNode);
-
-
-        while (s_openNodes.Count > 0)
+        while (s_openNodes.Values.MinBy(n => n.FCost) is { } currentNode)
         {
-            var currentNode = s_openNodes.Values.MinBy(n => n.FCost) ?? s_openNodes.Values.First();
-
-            if (currentNode.Position == end)
-            {
-                path = CalculatePath(currentNode);
-                return true;
-            }
-
             s_openNodes.Remove(currentNode.Position);
             s_closedSet.Add((currentNode.Position));
 
             foreach (var neighborPosition in Neighbors(currentNode.Position))
             {
+                if (neighborPosition == end)
+                {
+                    path = CalculatePath(new(neighborPosition) { Parent = currentNode });
+                    return true; // Path found
+                }
                 if (s_closedSet.Contains((neighborPosition))) continue;
 
                 var tentativeGCost = currentNode.GCost + 1; // Assuming each move costs 1
@@ -67,14 +62,13 @@ public static class Pathfinder
 
     public static IEnumerable<Point> Neighbors(Point node)
     {
-        for (var i = 0; i < 4; i++)
+        foreach (var point in s_neighbors)
         {
-            var newX = node.X + s_dx[i];
-            var newY = node.Y + s_dy[i];
+            var neighbor = new Point(node.X + point.X, node.Y + point.Y);
 
-            if (newX >= 0 && newX < GameState.Map.GridSize.Width && newY >= 0 && newY < GameState.Map.GridSize.Height)
+            if (GameState.Map.IsInBounds(neighbor))
             {
-                yield return new(newX, newY);
+                yield return neighbor;
             }
         }
     }
@@ -86,7 +80,7 @@ public static class Pathfinder
     {
         Stack<Point> path = [];
         Node? current = endNode;
-        while (current != null)
+        while (current is not null)
         {
             path.Push(current.Position);
             current = current.Parent;
