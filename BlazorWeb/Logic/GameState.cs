@@ -1,5 +1,4 @@
 ﻿using System.Drawing;
-using System.Security.Cryptography;
 
 namespace BlazorWeb.Logic;
 
@@ -7,8 +6,8 @@ public static class GameState
 {
     public const int TILE_SIZE = 64;
     public static GameMap Map { get; set; }
-    public static List<GameObject> Entities { get; set; }
-    public static Queue<GameObject> TurnOrder { get; set; }
+    public static List<Entity> Entities { get; set; }
+    public static Queue<Entity> TurnOrder { get; set; }
 
     static GameState()
     {
@@ -18,19 +17,19 @@ public static class GameState
             new()
             {
                 Id = "hero",
-                GridPosition = new(1, 0),
-                RenderedPosition = new Point(TILE_SIZE, 0),
+                MapPosition = new(1, 0),
+                RenderedPosition = new(TILE_SIZE, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
-                Type = EntityType.Player,
+                Type = EntityType.NPC,
                 Sprite = "assets/hero.png",
             },
             new()
             {
                 Id = "enemy",
-                GridPosition = new(3, 0),
-                RenderedPosition = new Point(TILE_SIZE * 3, 0),
+                MapPosition = new(3, 0),
+                RenderedPosition = new(TILE_SIZE * 3, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -40,8 +39,8 @@ public static class GameState
             new()
             {
                 Id = "blue",
-                GridPosition = new(5, 0),
-                RenderedPosition = new Point(TILE_SIZE * 5, 0),
+                MapPosition = new(5, 0),
+                RenderedPosition = new(TILE_SIZE * 5, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -51,8 +50,8 @@ public static class GameState
             new()
             {
                 Id = "vampire",
-                GridPosition = new(7, 0),
-                RenderedPosition = new Point(TILE_SIZE * 7, 0),
+                MapPosition = new(7, 0),
+                RenderedPosition = new(TILE_SIZE * 7, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -62,8 +61,8 @@ public static class GameState
             new()
             {
                 Id = "swashbuckle",
-                GridPosition = new(9, 0),
-                RenderedPosition = new Point(TILE_SIZE * 9, 0),
+                MapPosition = new(9, 0),
+                RenderedPosition = new(TILE_SIZE * 9, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -73,19 +72,19 @@ public static class GameState
             new()
             {
                 Id = "angel",
-                GridPosition = new(11, 0),
-                RenderedPosition = new Point(TILE_SIZE * 11, 0),
+                MapPosition = new(11, 0),
+                RenderedPosition = new(TILE_SIZE * 11, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
-                Type = EntityType.Player,
+                Type = EntityType.NPC,
                 Sprite = "assets/angel.png",
             },
             new()
             {
                 Id = "samuari",
-                GridPosition = new(13, 0),
-                RenderedPosition = new Point(TILE_SIZE * 13, 0),
+                MapPosition = new(13, 0),
+                RenderedPosition = new(TILE_SIZE * 13, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -95,8 +94,8 @@ public static class GameState
             new()
             {
                 Id = "black",
-                GridPosition = new(15, 0),
-                RenderedPosition = new Point(TILE_SIZE * 15, 0),
+                MapPosition = new(15, 0),
+                RenderedPosition = new(TILE_SIZE * 15, 0),
                 Size = new Size(TILE_SIZE, TILE_SIZE),
                 Direction = Direction.Down,
                 RenderGroup = RenderGroup.Entity,
@@ -107,46 +106,14 @@ public static class GameState
 
         foreach (var entity in Entities)
         {
-            Map.Grid[entity.GridPosition.X, entity.GridPosition.Y].Occupant = entity;
+            Map.Grid[(int)entity.MapPosition.X, (int)entity.MapPosition.Y].Occupant = entity;
+            entity.NextActionBehavior = new MoveUpDownBehavior(entity);
         }
     }
 
     public static void Update()
     {
-        foreach (var gameObject in Entities.Where(obj => obj.Type == EntityType.NPC))
-        {
-            var nextGridX = Math.Clamp(gameObject.Direction switch
-            {
-                Direction.Left => gameObject.GridPosition.X - 1,
-                Direction.Right => gameObject.GridPosition.X + 1,
-                _ => gameObject.GridPosition.X
-            }, 0 , Map.GridSize.Width - 1);
-            var nextGridY = Math.Clamp(gameObject.Direction switch
-            {
-                Direction.Up => gameObject.GridPosition.Y - 1,
-                Direction.Down => gameObject.GridPosition.Y + 1,
-                _ => gameObject.GridPosition.Y
-            }, 0, Map.GridSize.Height - 1);
-
-            Map.Grid[nextGridX, nextGridY].Occupant = gameObject;
-
-            if (gameObject.RenderedPosition.Y == 0 || gameObject.RenderedPosition.X == 0)
-            {
-                gameObject.Speed = new(0, RandomNumberGenerator.GetInt32(1, 4));
-            }                
-            else if (gameObject.RenderedPosition.Y == Map.RenderedSize.Height - gameObject.Size.Height || gameObject.RenderedPosition.X == Map.RenderedSize.Width - gameObject.Size.Width)
-            {
-                gameObject.Speed = new(0, RandomNumberGenerator.GetInt32(1, 4) * -1);
-            }
-
-            gameObject.Move();
-
-            if (gameObject.RenderedRect.IntersectsWith(gameObject.GridPositionRect) is false)
-            {
-                Map.Grid[gameObject.GridPosition.X, gameObject.GridPosition.Y].Occupant = null;
-                gameObject.GridPosition = new(nextGridX, nextGridY);
-            }
-        }
+        foreach (var entity in Entities) entity.Update();
     }
 }
 
@@ -173,71 +140,20 @@ public sealed class GameMap
     }
     public string Name { get; }
     public Size GridSize { get; }
-    public Size RenderedSize { get; set; }
+    public Size RenderedSize { get; }
     public GridTile[,] Grid;
+
+    public bool IsInBounds(Point position) =>
+        position.X >= 0 && position.X < GridSize.Width && position.Y >= 0 && position.Y < GridSize.Height;
+
+    public bool IsBlocked(Point position)
+    {
+        return Grid[position.X, position.Y].Occupant is { Collision: CollisionType.Solid };
+    }
 }
 
 public sealed class GridTile
 {
     public Point Position { get; set; }
-    public GameObject? Occupant { get; set; }
-}
-
-public sealed class GameObject
-{
-    public required string Id { get; set; }
-    public Point GridPosition { get; set; }
-    public Point RenderedPosition { get; set; }
-    public Rectangle RenderedRect => new(RenderedPosition, Size);
-    public Rectangle GridPositionRect => new(GridPosition.X * Size.Width, GridPosition.Y * Size.Height, Size.Width, Size.Height);
-    public Point Speed { get; set; }
-    public Size Size { get; set; }
-    public Direction Direction { get; set; }
-    public EntityType Type { get; set; }
-    public CollisionType Collision { get; set; }
-    public RenderGroup RenderGroup { get; set; }
-    public required string Sprite { get; set; }
-    public void Move()
-    {
-        var x = Math.Clamp(RenderedPosition.X + Speed.X, 0, GameState.Map.RenderedSize.Width - Size.Width);
-        var y = Math.Clamp(RenderedPosition.Y + Speed.Y, 0, GameState.Map.RenderedSize.Height - Size.Height);
-        RenderedPosition = new Point(x, y);
-        Direction = Speed switch
-        {
-            { Y: > 0 } => Direction.Down,
-            { Y: < 0 } => Direction.Up,
-            { X: > 0 } => Direction.Right,
-            { X: < 0 } => Direction.Left,
-            _ => Direction
-        };
-    }
-}
-
-public enum Direction
-{
-    Down = 0,
-    Left = 1,
-    Right = 2,
-    Up = 3
-}
-
-public enum RenderGroup
-{
-    Background,
-    Entity,
-    Foreground,
-    UI,
-}
-
-public enum CollisionType
-{
-    Solid,
-    Passable,
-}
-
-public enum EntityType
-{
-    Player,
-    NPC,
-    Effects,
+    public Entity? Occupant { get; set; }
 }

@@ -89,9 +89,9 @@
         isPaused = !isPaused;
     }
 
-    private string GameObjectBoxStyle(GameObject obj) =>
+    private string GameObjectBoxStyle(Entity obj) =>
         $"position:absolute;overflow:hidden;top:{obj.RenderedPosition.Y}px;left:{obj.RenderedPosition.X}px;height:{obj.Size.Height}px;width:{obj.Size.Width}px;z-index:{(int)obj.RenderGroup}";
-    private string GameObjectStyle(GameObject obj) =>
+    private string GameObjectStyle(Entity obj) =>
         $"position:absolute;top:{(int)obj.Direction * obj.Size.Height * -1}px;left:{obj.Size.Width * spriteOffset * -1}px;height:{obj.Size.Height * 4}px;width:{obj.Size.Width * 3}px;z-index:{(int)obj.RenderGroup}";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
