@@ -1,6 +1,6 @@
 ﻿using System.Drawing;
 
-namespace BlazorWeb.Logic;
+namespace GameLibrary;
 
 public static class GameState
 {

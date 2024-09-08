@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 
-namespace BlazorWeb.Logic;
+namespace GameLibrary;
 
 public sealed record Node(Point Position)
 {

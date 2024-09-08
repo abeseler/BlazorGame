@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace BlazorWeb.Logic;
+namespace GameLibrary;
 
 public static class Controller
 {

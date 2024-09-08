@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using System.Security.Cryptography;
 
-namespace BlazorWeb.Logic;
+namespace GameLibrary;
 
 public interface IBehavior
 {
