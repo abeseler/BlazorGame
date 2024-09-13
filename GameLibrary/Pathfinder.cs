@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Numerics;
 
 namespace GameLibrary;
 
@@ -87,4 +88,12 @@ public static class Pathfinder
         }
         return path;
     }
+}
+
+public static class Vector2Ext
+{
+    public static Vector2 Up => new(0, -1);
+    public static Vector2 Down => new(0, 1);
+    public static Vector2 Left => new(-1, 0);
+    public static Vector2 Right => new(1, 0);
 }

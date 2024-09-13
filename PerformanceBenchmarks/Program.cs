@@ -2,4 +2,4 @@
 using PerformanceBenchmarks;
 
 BenchmarkRunner.Run<PathfinderBenchmarks>();
-BenchmarkRunner.Run<GameUpdateBenchmarks>();
+//BenchmarkRunner.Run<GameUpdateBenchmarks>();

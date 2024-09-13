@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Numerics;
 using System.Security.Cryptography;
 
 namespace GameLibrary;
@@ -8,29 +9,35 @@ public interface IBehavior
     IAction DecideNextAction();
 }
 
-public sealed class MoveUpDownBehavior(Entity entity) : IBehavior
+public sealed class MoveDirection(Entity entity, Direction direction) : IBehavior
 {
     private readonly Entity _entity = entity;
-    private int _speed = RandomNumberGenerator.GetInt32(1, 4);
+    private readonly Direction _direction = direction;
     public IAction DecideNextAction()
     {
-        if (_entity.MapPosition.Y == 0 || _entity.MapPosition.Y == GameState.Map.GridSize.Height - 1)
+        var nextGridY = _direction switch
         {
-            _entity.Direction = _entity.MapPosition.Y == 0 ? Direction.Down : Direction.Up;
-            _speed = RandomNumberGenerator.GetInt32(1, 4);
-        }
-
-        var nextGridY = _entity.Direction == Direction.Down ? _entity.MapPosition.Y + 1 : _entity.MapPosition.Y - 1;
-        var nextGridX = _entity.MapPosition.X;
-
-        if (GameState.Map.Grid[nextGridX, nextGridY].Occupant is not null)
+            Direction.Down => _entity.MapPosition.Y + 1,
+            Direction.Up => _entity.MapPosition.Y - 1,
+            _ => _entity.MapPosition.Y
+        };
+        var nextGridX = _direction switch
         {
-            return new WaitAction(100);
+            Direction.Left => _entity.MapPosition.X - 1,
+            Direction.Right => _entity.MapPosition.X + 1,
+            _ => _entity.MapPosition.X
+        };
+
+        var newPosition = new Point(nextGridX, nextGridY);
+
+        if (GameState.Map.IsInBounds(newPosition) is false || GameState.Map.IsBlocked(newPosition))
+        {
+            return new WaitAction(0);
         }
 
         GameState.Map.Grid[nextGridX, nextGridY].Occupant = _entity;
 
-        return new MoveAction(new(nextGridX, nextGridY), _speed);
+        return new MoveAction(newPosition, 1);
     }
 }
 
